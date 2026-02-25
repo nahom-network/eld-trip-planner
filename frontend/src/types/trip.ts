@@ -1,3 +1,11 @@
+// ── Pagination ───────────────────────────────────────────────────────────────
+export interface Paginated<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 // ── GeoJSON ────────────────────────────────────────────────────────────────
 export interface GeoJSONLineString {
   type: "LineString";

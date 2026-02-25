@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,7 +17,7 @@ import { useAuth } from "../stores/authStore";
 import { useTheme } from "../stores/themeStore";
 import ThemeToggle from "../components/ThemeToggle";
 import { listTrips } from "../api/tripsApi";
-import type { TripList, TripStatus } from "../types/trip";
+import type { TripList, TripStatus, Paginated } from "../types/trip";
 
 const DISPLAY = "'Bricolage Grotesque', sans-serif";
 const MONO = "'DM Mono', monospace";
@@ -164,15 +164,16 @@ export default function TripsPage() {
   useFonts();
   const { user, logout } = useAuth();
   const { colors: C } = useTheme();
+  const [page, setPage] = useState(1);
 
-  const {
-    data: trips,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ["trips"],
-    queryFn: listTrips,
+  const { data, isLoading, isError } = useQuery<Paginated<TripList>>({
+    queryKey: ["trips", page],
+    queryFn: () => listTrips(page),
+    placeholderData: (prev) => prev,
   });
+
+  const trips = data?.results;
+  const hasPagination = !!(data?.next || page > 1);
 
   return (
     <div className="min-h-screen" style={{ background: C.bg }}>
@@ -354,6 +355,51 @@ export default function TripsPage() {
               ))}
             </div>
           </AnimatePresence>
+        )}
+
+        {/* Pagination */}
+        {data && hasPagination && (
+          <motion.div
+            className="flex items-center justify-between pt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!data.previous}
+              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-30"
+              style={{
+                background: C.surface,
+                border: `1px solid ${C.border}`,
+                color: C.text,
+                fontFamily: BODY,
+                cursor: data.previous ? "pointer" : "not-allowed",
+              }}
+            >
+              ← Previous
+            </button>
+            <span
+              className="text-xs"
+              style={{ color: C.muted, fontFamily: "'DM Mono', monospace" }}
+            >
+              Page {page}
+              {data.count ? ` · ${data.count} total` : ""}
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!data.next}
+              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-30"
+              style={{
+                background: C.surface,
+                border: `1px solid ${C.border}`,
+                color: C.text,
+                fontFamily: BODY,
+                cursor: data.next ? "pointer" : "not-allowed",
+              }}
+            >
+              Next →
+            </button>
+          </motion.div>
         )}
       </main>
     </div>

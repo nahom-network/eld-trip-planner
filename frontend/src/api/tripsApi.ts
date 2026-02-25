@@ -2,6 +2,7 @@ import axios, { type InternalAxiosRequestConfig } from "axios";
 import type {
   Trip,
   TripList,
+  Paginated,
   CreateTripPayload,
   CreateTripResponse,
 } from "../types/trip";
@@ -61,8 +62,10 @@ api.interceptors.response.use(
 );
 
 // ── API calls ─────────────────────────────────────────────────────────────
-export async function listTrips(): Promise<TripList[]> {
-  const { data } = await api.get<TripList[]>("/api/trips/");
+export async function listTrips(page = 1): Promise<Paginated<TripList>> {
+  const { data } = await api.get<Paginated<TripList>>("/api/trips/", {
+    params: { page },
+  });
   return data;
 }
 

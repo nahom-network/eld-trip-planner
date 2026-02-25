@@ -208,7 +208,7 @@ export default function LocationInput({
                 <li
                   key={s.place_id}
                   role="option"
-                  aria-selected={i === activeIndex}
+                  aria-selected={i === activeIndex ? "true" : "false"}
                   onMouseDown={(e) => {
                     e.preventDefault(); // prevent blur before click
                     selectSuggestion(s);

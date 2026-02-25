@@ -1,0 +1,78 @@
+# ── Trip Planner ELD — Docker Compose ────────────────────────────────────────
+# Usage:
+#   1. cp .env.example .env   (fill in real values)
+#   2. docker compose up --build -d
+#   3. Open http://localhost in your browser
+#
+# Services
+#   frontend  — React SPA served by nginx (port 80)
+#               also reverse-proxies /api/ and /media/ to the backend
+#   backend   — Django + Gunicorn (internal port 8000, not published)
+#   db        — PostgreSQL 16 (internal, not published)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16.3-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-trip_planner}
+      POSTGRES_USER:     ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-trip_planner}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Django backend ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./trip_planner
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEBUG:            "False"
+      SECRET_KEY:       ${SECRET_KEY}
+      ALLOWED_HOSTS:    ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DB_NAME:          ${DB_NAME:-trip_planner}
+      DB_USER:          ${DB_USER:-postgres}
+      DB_PASSWORD:      ${DB_PASSWORD}
+      DB_HOST:          db
+      DB_PORT:          "5432"
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+    volumes:
+      - media_files:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    # Port 8000 is intentionally NOT published — nginx proxies it internally.
+    expose:
+      - "8000"
+
+  # ── React + nginx frontend ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Empty string → axios uses the current browser origin as base URL.
+        # nginx then proxies /api/ and /media/ to the backend container.
+        VITE_API_BASE_URL: ""
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  media_files:

@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Truck,
@@ -8,80 +10,155 @@ import {
   Clock,
   AlertCircle,
   Loader2,
+  ChevronRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import ThemeToggle from "../components/ThemeToggle";
 import { listTrips } from "../api/tripsApi";
 import type { TripList, TripStatus } from "../types/trip";
 
-const STATUS_VARIANT: Record<
+const DISPLAY = "'Bricolage Grotesque', sans-serif";
+const MONO = "'DM Mono', monospace";
+const BODY = "'DM Sans', sans-serif";
+
+function useFonts() {
+  useEffect(() => {
+    if (document.getElementById("app-fonts")) return;
+    const l = document.createElement("link");
+    l.id = "app-fonts";
+    l.rel = "stylesheet";
+    l.href =
+      "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap";
+    document.head.appendChild(l);
+  }, []);
+}
+
+const STATUS_COLORS: Record<
   TripStatus,
-  "default" | "secondary" | "destructive" | "outline"
+  { bg: string; text: string; border: string }
 > = {
-  completed: "default",
-  pending: "secondary",
-  error: "destructive",
+  completed: {
+    bg: "rgba(34,197,94,0.1)",
+    text: "#4ade80",
+    border: "rgba(34,197,94,0.3)",
+  },
+  pending: {
+    bg: "rgba(245,158,11,0.1)",
+    text: "#fbbf24",
+    border: "rgba(245,158,11,0.3)",
+  },
+  error: {
+    bg: "rgba(239,68,68,0.1)",
+    text: "#f87171",
+    border: "rgba(239,68,68,0.3)",
+  },
 };
 
-function TripCard({ trip }: { trip: TripList }) {
+function StatusPill({ status }: { status: TripStatus }) {
+  const s = STATUS_COLORS[status];
+  return (
+    <span
+      className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+      style={{
+        background: s.bg,
+        color: s.text,
+        border: `1px solid ${s.border}`,
+        fontFamily: MONO,
+        letterSpacing: "0.05em",
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
+function TripCard({ trip, index }: { trip: TripList; index: number }) {
+  const { colors: C } = useTheme();
   const createdAt = new Date(trip.created_at).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
-
   return (
-    <Link to={`/trips/${trip.id}`} className="block group">
-      <Card className="transition-shadow group-hover:shadow-md">
-        <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <CardTitle className="text-sm font-semibold truncate">
-              {trip.current_location} → {trip.dropoff_location}
-            </CardTitle>
-            <CardDescription className="text-xs truncate">
-              via {trip.pickup_location}
-            </CardDescription>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.45,
+        ease: [0.22, 1, 0.36, 1],
+        delay: index * 0.07,
+      }}
+    >
+      <Link to={`/trips/${trip.id}`} className="block group">
+        <motion.div
+          className="relative rounded-2xl p-5 flex flex-col gap-3"
+          style={{ background: C.surface, border: `1px solid ${C.border}` }}
+          whileHover={{ y: -2, borderColor: "rgba(245,158,11,0.22)" }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* hover glow */}
+          <div
+            className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ boxShadow: "inset 0 0 40px rgba(245,158,11,0.04)" }}
+          />
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <p
+                className="font-semibold truncate"
+                style={{ color: C.text, fontFamily: DISPLAY, fontSize: "0.95rem" }}
+              >
+                {trip.current_location} → {trip.dropoff_location}
+              </p>
+              <p
+                className="text-xs truncate"
+                style={{ color: C.muted, fontFamily: BODY }}
+              >
+                via {trip.pickup_location}
+              </p>
+            </div>
+            <StatusPill status={trip.status} />
           </div>
-          <Badge
-            variant={STATUS_VARIANT[trip.status]}
-            className="shrink-0 ml-2 capitalize"
-          >
-            {trip.status}
-          </Badge>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
             {trip.total_distance_miles != null && (
-              <span className="flex items-center gap-1">
-                <Route className="w-3 h-3" />
+              <span
+                className="flex items-center gap-1.5 text-xs"
+                style={{ color: C.muted, fontFamily: BODY }}
+              >
+                <Route className="w-3 h-3" style={{ color: C.amber }} />
                 {trip.total_distance_miles.toFixed(0)} mi
               </span>
             )}
             {trip.estimated_duration_hours != null && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+              <span
+                className="flex items-center gap-1.5 text-xs"
+                style={{ color: C.muted, fontFamily: BODY }}
+              >
+                <Clock className="w-3 h-3" style={{ color: C.amber }} />
                 {trip.estimated_duration_hours.toFixed(1)} hrs
               </span>
             )}
-            <span className="ml-auto">{createdAt}</span>
+            <span
+              className="ml-auto text-xs"
+              style={{ color: C.textFaint, fontFamily: MONO }}
+            >
+              {createdAt}
+            </span>
+            <ChevronRight
+              className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ color: C.amber }}
+            />
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+        </motion.div>
+      </Link>
+    </motion.div>
   );
 }
 
 export default function TripsPage() {
+  useFonts();
   const { user, logout } = useAuth();
+  const { colors: C } = useTheme();
 
   const {
     data: trips,
@@ -93,86 +170,182 @@ export default function TripsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-background border-b px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Truck className="w-5 h-5 text-primary" />
-          <span className="font-bold text-base">Trip Planner</span>
+    <div className="min-h-screen" style={{ background: C.bg }}>
+      {/* ── Header ── */}
+      <motion.header
+        className="sticky top-0 z-40 flex items-center justify-between px-6 py-4"
+        style={{
+          backdropFilter: "blur(16px)",
+          borderBottom: `1px solid ${C.border}`,
+          background: C.navBg,
+        }}
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: C.grad }}
+          >
+            <Truck className="w-4 h-4 text-white" strokeWidth={2} />
+          </div>
+          <span
+            className="font-extrabold tracking-widest text-white"
+            style={{
+              fontFamily: DISPLAY,
+              fontSize: "1.05rem",
+              letterSpacing: "0.1em",
+            }}
+          >
+            SPOTTER
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground hidden sm:block">
+        <div className="flex items-center gap-4">
+          <span
+            className="hidden sm:block text-sm"
+            style={{ color: C.muted, fontFamily: BODY }}
+          >
             {user?.username}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
+          <ThemeToggle />
+          <motion.button
             onClick={logout}
-            className="gap-1.5"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+            style={{
+              color: C.muted,
+              fontFamily: BODY,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
+            whileHover={{ color: "#fff" }}
+            whileTap={{ scale: 0.97 }}
           >
             <LogOut className="w-4 h-4" />
             Sign out
-          </Button>
+          </motion.button>
         </div>
-      </header>
+      </motion.header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6">
-        {/* Page title + new trip button */}
-        <div className="flex items-center justify-between">
+      {/* ── Main ── */}
+      <main className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-8">
+        {/* Title row */}
+        <motion.div
+          className="flex items-end justify-between"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div>
-            <h1 className="text-xl font-bold">My Trips</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              All your planned routes in one place.
+            <p
+              className="text-xs font-semibold uppercase tracking-widest mb-1"
+              style={{ color: C.amber, fontFamily: "'DM Mono', monospace" }}
+            >
+              Dashboard
             </p>
+            <h1
+              className="text-white"
+              style={{
+                fontFamily: DISPLAY,
+                fontSize: "2rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              My Trips
+            </h1>
           </div>
-          <Button asChild size="sm" className="gap-1.5">
-            <Link to="/trips/new">
+          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+            <Link
+              to="/trips/new"
+              className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold"
+              style={{ background: C.grad, color: "#fff", fontFamily: BODY }}
+            >
               <Plus className="w-4 h-4" />
               New trip
             </Link>
-          </Button>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        <Separator />
+        {/* Divider */}
+        <div style={{ height: 1, background: C.border }} />
 
-        {/* Trip list */}
+        {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          </div>
-        )}
-
-        {isError && (
-          <div className="flex flex-col items-center justify-center py-16 gap-2 text-destructive">
-            <AlertCircle className="w-8 h-8" />
-            <p className="text-sm font-medium">Failed to load trips.</p>
-          </div>
-        )}
-
-        {trips && trips.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-            <Truck className="w-10 h-10" />
-            <p className="text-sm">No trips yet.</p>
-            <Button
-              asChild
-              size="sm"
-              variant="outline"
-              className="gap-1.5 mt-1"
+          <div className="flex items-center justify-center py-20">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             >
-              <Link to="/trips/new">
+              <Loader2 className="w-8 h-8" style={{ color: C.amber }} />
+            </motion.div>
+          </div>
+        )}
+
+        {/* Error */}
+        {isError && (
+          <motion.div
+            className="flex flex-col items-center justify-center py-20 gap-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <AlertCircle className="w-8 h-8" style={{ color: "#f87171" }} />
+            <p
+              className="text-sm font-medium"
+              style={{ color: "#f87171", fontFamily: BODY }}
+            >
+              Failed to load trips.
+            </p>
+          </motion.div>
+        )}
+
+        {/* Empty state */}
+        {trips && trips.length === 0 && (
+          <motion.div
+            className="flex flex-col items-center justify-center py-20 gap-4"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{
+                background: "rgba(245,158,11,0.1)",
+                border: `1px solid rgba(245,158,11,0.2)`,
+              }}
+            >
+              <Truck
+                className="w-7 h-7"
+                style={{ color: C.amber }}
+                strokeWidth={1.5}
+              />
+            </div>
+            <p className="text-sm" style={{ color: C.muted, fontFamily: BODY }}>
+              No trips yet.
+            </p>
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                to="/trips/new"
+                className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold"
+                style={{ background: C.grad, color: "#fff", fontFamily: BODY }}
+              >
                 <Plus className="w-4 h-4" />
                 Plan your first trip
               </Link>
-            </Button>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
+        {/* Trip list */}
         {trips && trips.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {trips.map((trip) => (
-              <TripCard key={trip.id} trip={trip} />
-            ))}
-          </div>
+          <AnimatePresence>
+            <div className="flex flex-col gap-3">
+              {trips.map((trip, i) => (
+                <TripCard key={trip.id} trip={trip} index={i} />
+              ))}
+            </div>
+          </AnimatePresence>
         )}
       </main>
     </div>

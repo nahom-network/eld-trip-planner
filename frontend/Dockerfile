@@ -24,9 +24,8 @@ RUN pnpm build
 # ── Stage 2: Serve ────────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine3.21 AS runtime
 
-# Remove default nginx config and replace with SPA-friendly one
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/app.conf
+# Replace default nginx config with SPA-friendly one
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -35,6 +34,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD wget -qO- http://localhost:80/ || exit 1
+    CMD wget -qO- http://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

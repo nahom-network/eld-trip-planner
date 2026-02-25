@@ -165,10 +165,13 @@ export default function ResultsPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: C.bg }}>
+    <div
+      className="h-screen flex flex-col overflow-hidden"
+      style={{ background: C.bg }}
+    >
       {/* ── Header ── */}
       <motion.header
-        className="sticky top-0 z-40 px-5 py-3 flex items-center justify-between gap-4 shrink-0"
+        className="sticky top-0 z-50 px-5 py-3 flex items-center justify-between gap-4 shrink-0"
         style={{
           backdropFilter: "blur(16px)",
           borderBottom: `1px solid ${C.border}`,

@@ -77,13 +77,16 @@ class MeView(APIView):
         return Response(UserSerializer(request.user).data)
 
     @extend_schema(
-        summary="Delete account",
+        summary="Deactivate account (soft delete)",
+        description="Sets the account to inactive. The user can no longer log in but all data is retained.",
         responses={
-            204: OpenApiResponse(description="Account deleted"),
+            204: OpenApiResponse(description="Account deactivated"),
         },
     )
     def delete(self, request):
-        request.user.delete()
+        user = request.user
+        user.is_active = False
+        user.save(update_fields=["is_active"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

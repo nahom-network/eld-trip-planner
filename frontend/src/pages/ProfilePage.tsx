@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import { useTheme } from "../stores/themeStore";
 import ThemeToggle from "../components/ThemeToggle";
@@ -46,6 +47,10 @@ function Field({
   type = "text",
   placeholder,
   disabled,
+  readOnly,
+  editable,
+  isEditing,
+  onToggleEdit,
   rightSlot,
 }: {
   label: string;
@@ -54,9 +59,14 @@ function Field({
   type?: string;
   placeholder?: string;
   disabled?: boolean;
+  readOnly?: boolean;
+  editable?: boolean;
+  isEditing?: boolean;
+  onToggleEdit?: () => void;
   rightSlot?: React.ReactNode;
 }) {
   const { colors: C, isDark } = useTheme();
+  const locked = editable && !isEditing;
   return (
     <div className="flex flex-col gap-1.5">
       <label
@@ -72,22 +82,53 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
+          readOnly={readOnly || locked}
           className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all"
           style={{
-            background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+            background: disabled
+              ? isDark
+                ? "rgba(255,255,255,0.02)"
+                : "rgba(0,0,0,0.02)"
+              : locked
+                ? isDark
+                  ? "rgba(255,255,255,0.03)"
+                  : "rgba(0,0,0,0.025)"
+                : isDark
+                  ? "rgba(255,255,255,0.05)"
+                  : "rgba(0,0,0,0.04)",
             border: `1px solid ${C.border}`,
-            color: C.text,
+            color: disabled ? C.muted : C.text,
             fontFamily: BODY,
-            paddingRight: rightSlot ? "2.75rem" : undefined,
+            paddingRight: editable || rightSlot ? "2.75rem" : undefined,
+            cursor: locked ? "default" : undefined,
+            opacity: disabled ? 0.55 : 1,
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = C.borderHover;
+            if (!locked && !disabled)
+              e.currentTarget.style.borderColor = C.borderHover;
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = C.border;
           }}
         />
-        {rightSlot && (
+        {editable && (
+          <button
+            type="button"
+            onClick={onToggleEdit}
+            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+            style={{
+              background: "none",
+              border: "none",
+              padding: 2,
+              cursor: "pointer",
+              color: isEditing ? C.amber : C.muted,
+            }}
+            title={isEditing ? "Lock field" : "Edit field"}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {!editable && rightSlot && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             {rightSlot}
           </div>
@@ -193,7 +234,13 @@ function ProfileSection() {
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
   const [username, setUsername] = useState(user?.username ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
+  const email = user?.email ?? "";
+
+  // Per-field edit toggle
+  const [editingFirst, setEditingFirst] = useState(false);
+  const [editingLast, setEditingLast] = useState(false);
+  const [editingUsername, setEditingUsername] = useState(false);
+
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     msg: string;
@@ -207,6 +254,10 @@ function ProfileSection() {
     },
     onSuccess: (updated) => {
       updateUser(updated);
+      // Lock all fields after a successful save
+      setEditingFirst(false);
+      setEditingLast(false);
+      setEditingUsername(false);
       setFeedback({ type: "success", msg: "Profile updated successfully." });
       setTimeout(() => setFeedback(null), 3500);
     },
@@ -222,7 +273,6 @@ function ProfileSection() {
     e.preventDefault();
     const payload: UpdateProfilePayload = {};
     if (username !== user?.username) payload.username = username;
-    if (email !== user?.email) payload.email = email;
     if (firstName !== (user?.first_name ?? "")) payload.first_name = firstName;
     if (lastName !== (user?.last_name ?? "")) payload.last_name = lastName;
     if (!Object.keys(payload).length) {
@@ -233,11 +283,13 @@ function ProfileSection() {
     mutation.mutate(payload);
   }
 
+  const anyEditing = editingFirst || editingLast || editingUsername;
+
   return (
     <SectionCard
       icon={<UserCircle className="w-4 h-4" style={{ color: C.amber }} />}
       title="Account Info"
-      subtitle="Update your display name and contact details."
+      subtitle="Click the pencil icon next to a field to edit it."
       delay={0.1}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -248,6 +300,9 @@ function ProfileSection() {
             onChange={setFirstName}
             placeholder="John"
             disabled={mutation.isPending}
+            editable
+            isEditing={editingFirst}
+            onToggleEdit={() => setEditingFirst((v) => !v)}
           />
           <Field
             label="Last name"
@@ -255,6 +310,9 @@ function ProfileSection() {
             onChange={setLastName}
             placeholder="Doe"
             disabled={mutation.isPending}
+            editable
+            isEditing={editingLast}
+            onToggleEdit={() => setEditingLast((v) => !v)}
           />
         </div>
         <Field
@@ -263,47 +321,56 @@ function ProfileSection() {
           onChange={setUsername}
           placeholder="johndoe"
           disabled={mutation.isPending}
+          editable
+          isEditing={editingUsername}
+          onToggleEdit={() => setEditingUsername((v) => !v)}
         />
         <Field
           label="Email"
           value={email}
-          onChange={setEmail}
+          onChange={() => {}}
           type="email"
           placeholder="john@example.com"
-          disabled={mutation.isPending}
+          disabled
         />
         <AnimatePresence mode="wait">
           {feedback && (
             <Alert key="fb" type={feedback.type} message={feedback.msg} />
           )}
         </AnimatePresence>
-        <div className="flex justify-end">
-          <motion.button
-            type="submit"
-            disabled={mutation.isPending}
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold"
-            style={{
-              background: mutation.isPending ? "rgba(245,158,11,0.45)" : C.grad,
-              color: "#fff",
-              fontFamily: BODY,
-              cursor: mutation.isPending ? "not-allowed" : "pointer",
-              border: "none",
-            }}
-            whileHover={!mutation.isPending ? { scale: 1.04 } : {}}
-            whileTap={!mutation.isPending ? { scale: 0.97 } : {}}
-          >
-            {mutation.isPending ? (
-              <>
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
-                Saving…
-              </>
-            ) : (
-              <>
-                <Check className="w-3.5 h-3.5" /> Save changes
-              </>
-            )}
-          </motion.button>
-        </div>
+        {anyEditing && (
+          <div className="flex justify-end">
+            <motion.button
+              type="submit"
+              disabled={mutation.isPending}
+              className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold"
+              style={{
+                background: mutation.isPending
+                  ? "rgba(245,158,11,0.45)"
+                  : C.grad,
+                color: "#fff",
+                fontFamily: BODY,
+                cursor: mutation.isPending ? "not-allowed" : "pointer",
+                border: "none",
+              }}
+              whileHover={!mutation.isPending ? { scale: 1.04 } : {}}
+              whileTap={!mutation.isPending ? { scale: 0.97 } : {}}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {mutation.isPending ? (
+                <>
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Check className="w-3.5 h-3.5" /> Save changes
+                </>
+              )}
+            </motion.button>
+          </div>
+        )}
       </form>
     </SectionCard>
   );
@@ -513,8 +580,8 @@ function DangerSection() {
       <div style={{ height: 1, background: "rgba(239,68,68,0.15)" }} />
 
       <p className="text-sm" style={{ color: C.muted, fontFamily: BODY }}>
-        Permanently delete your account and all associated trips. This action
-        cannot be undone.
+        Permanently deactivate your account and all associated trips. This
+        action cannot be undone.
       </p>
 
       <AnimatePresence>
@@ -545,7 +612,7 @@ function DangerSection() {
                 }}
               >
                 Are you sure? All your trips and ELD logs will be permanently
-                deleted. You cannot recover this data.
+                deactivated. You cannot recover this data.
               </p>
             </div>
           </motion.div>
@@ -569,7 +636,7 @@ function DangerSection() {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
-            <Trash2 className="w-3.5 h-3.5" /> Delete my account
+            <Trash2 className="w-3.5 h-3.5" /> Deactivate my account
           </motion.button>
         ) : (
           <>
@@ -595,7 +662,7 @@ function DangerSection() {
                   Deleting…
                 </>
               ) : (
-                "Yes, delete everything"
+                "Yes, deactivate"
               )}
             </motion.button>
             <motion.button

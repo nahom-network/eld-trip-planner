@@ -287,9 +287,24 @@ class DeleteAccountTest(TestCase):
         response = self.client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-    def test_delete_removes_user(self):
+    def test_delete_keeps_user_record(self):
+        """Soft delete — user row still exists in the database."""
         self.client.delete(self.url)
-        self.assertFalse(User.objects.filter(username="driver1").exists())
+        self.assertTrue(User.objects.filter(username="driver1").exists())
+
+    def test_delete_sets_is_active_false(self):
+        self.client.delete(self.url)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+
+    def test_delete_prevents_login(self):
+        self.client.delete(self.url)
+        login_response = self.client.post(
+            reverse("auth-token"),
+            {"username": "driver1", "password": "pass"},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_delete_unauthenticated_returns_401(self):
         self.client.force_authenticate(user=None)

@@ -26,86 +26,45 @@ import { Separator } from "@/components/ui/separator";
 function RoutePath() {
   return (
     <svg
-      viewBox="0 0 800 120"
+      viewBox="0 0 800 100"
       preserveAspectRatio="none"
       className="w-full h-full"
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0" />
-          <stop offset="30%" stopColor="#f59e0b" stopOpacity="1" />
-          <stop offset="70%" stopColor="#ea580c" stopOpacity="1" />
-          <stop offset="100%" stopColor="#ea580c" stopOpacity="0" />
+        <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
+          <stop offset="25%" stopColor="currentColor" stopOpacity="0.5" />
+          <stop offset="75%" stopColor="currentColor" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* Road base */}
+      {/* Road lane */}
       <path
-        d="M 0 80 Q 200 20 400 80 Q 600 140 800 80"
+        d="M 0 50 Q 200 12 400 50 Q 600 88 800 50"
         fill="none"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="24"
+        stroke="currentColor"
+        strokeWidth="18"
         strokeLinecap="round"
+        strokeOpacity="0.06"
       />
-      {/* Road center line animated */}
+      {/* Animated dashes */}
       <path
-        d="M 0 80 Q 200 20 400 80 Q 600 140 800 80"
+        d="M 0 50 Q 200 12 400 50 Q 600 88 800 50"
         fill="none"
-        stroke="url(#routeGrad)"
-        strokeWidth="2.5"
+        stroke="url(#rg)"
+        strokeWidth="2"
         strokeLinecap="round"
-        strokeDasharray="12 8"
-        style={{ animation: "dashMove 3s linear infinite" }}
+        strokeDasharray="10 7"
+        className="text-foreground"
+        style={{ animation: "dashMove 2.4s linear infinite" }}
       />
-      {/* Origin dot */}
-      <circle cx="80" cy="74" r="6" fill="#f59e0b">
-        <animate
-          attributeName="r"
-          values="6;9;6"
-          dur="2s"
-          repeatCount="indefinite"
-        />
-        <animate
-          attributeName="opacity"
-          values="1;0.5;1"
-          dur="2s"
-          repeatCount="indefinite"
-        />
-      </circle>
-      {/* Pickup dot */}
-      <circle cx="400" cy="80" r="6" fill="#fb923c">
-        <animate
-          attributeName="r"
-          values="6;9;6"
-          dur="2s"
-          begin="0.6s"
-          repeatCount="indefinite"
-        />
-        <animate
-          attributeName="opacity"
-          values="1;0.5;1"
-          dur="2s"
-          begin="0.6s"
-          repeatCount="indefinite"
-        />
-      </circle>
-      {/* Destination dot */}
-      <circle cx="720" cy="74" r="6" fill="#ef4444">
-        <animate
-          attributeName="r"
-          values="6;9;6"
-          dur="2s"
-          begin="1.2s"
-          repeatCount="indefinite"
-        />
-        <animate
-          attributeName="opacity"
-          values="1;0.5;1"
-          dur="2s"
-          begin="1.2s"
-          repeatCount="indefinite"
-        />
-      </circle>
+      {[{ cx: 70, cy: 47 }, { cx: 400, cy: 50 }, { cx: 730, cy: 47 }].map((p, i) => (
+        <circle key={i} cx={p.cx} cy={p.cy} r="5" className="fill-primary">
+          <animate attributeName="r" values="5;8;5" dur="2s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
+          <animate attributeName="opacity" values="1;0.4;1" dur="2s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
     </svg>
   );
 }
@@ -151,97 +110,49 @@ function Feature({
   icon: Icon,
   title,
   desc,
-  delay,
 }: {
   icon: React.ElementType;
   title: string;
   desc: string;
-  delay: number;
 }) {
   return (
-    <div
-      className="group relative flex flex-col gap-4 rounded-2xl border p-7 transition-transform duration-300 hover:-translate-y-1"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        borderColor: "rgba(255,255,255,0.08)",
-        animationDelay: `${delay}ms`,
-      }}
-    >
-      <div
-        className="flex h-12 w-12 items-center justify-center rounded-xl"
-        style={{ background: "rgba(245,158,11,0.12)" }}
-      >
-        <Icon className="h-5 w-5 text-amber-400" strokeWidth={1.8} />
-      </div>
-      <h3
-        className="text-lg font-semibold leading-snug text-white"
-        style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: "1.2rem",
-          letterSpacing: "0.02em",
-        }}
-      >
-        {title}
-      </h3>
-      <p
-        className="text-sm leading-relaxed"
-        style={{
-          color: "rgba(255,255,255,0.5)",
-          fontFamily: "'DM Sans', sans-serif",
-        }}
-      >
-        {desc}
-      </p>
-      {/* hover glow */}
-      <div
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{ boxShadow: "inset 0 0 40px rgba(245,158,11,0.05)" }}
-      />
-    </div>
+    <Card className="group transition-shadow duration-200 hover:shadow-md">
+      <CardHeader className="pb-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-3">
+          <Icon className="h-5 w-5 text-foreground" strokeWidth={1.8} />
+        </div>
+        <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardDescription className="text-sm leading-relaxed">{desc}</CardDescription>
+      </CardContent>
+    </Card>
   );
 }
 
 /* ─── Step ───────────────────────────────────────────────────────────── */
-function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
+function Step({
+  n,
+  title,
+  desc,
+  last = false,
+}: {
+  n: string;
+  title: string;
+  desc: string;
+  last?: boolean;
+}) {
   return (
-    <div className="flex gap-5">
-      <div className="flex flex-col items-center gap-1 shrink-0">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
-          style={{
-            background: "linear-gradient(135deg,#f59e0b,#ea580c)",
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: "1.1rem",
-            letterSpacing: "0.05em",
-          }}
-        >
+    <div className="flex gap-4">
+      <div className="flex flex-col items-center shrink-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
           {n}
         </div>
-        <div
-          className="flex-1 w-px"
-          style={{ background: "rgba(255,255,255,0.08)", minHeight: "2rem" }}
-        />
+        {!last && <div className="w-px flex-1 bg-border my-1 min-h-8" />}
       </div>
-      <div className="pb-8">
-        <p
-          className="mb-1.5 font-semibold text-white"
-          style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: "1.15rem",
-            letterSpacing: "0.03em",
-          }}
-        >
-          {title}
-        </p>
-        <p
-          className="text-sm leading-relaxed"
-          style={{
-            color: "rgba(255,255,255,0.5)",
-            fontFamily: "'DM Sans', sans-serif",
-          }}
-        >
-          {desc}
-        </p>
+      <div className={last ? "pb-0" : "pb-8"}>
+        <p className="font-semibold text-sm text-foreground mb-1">{title}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
       </div>
     </div>
   );

@@ -16,4 +16,6 @@ dependencies = [
     "gunicorn>=23.0.0",
     "drf-spectacular>=0.29.0",
     "djangorestframework-simplejwt>=5.5.1",
+    "django-storages>=1.14.6",
+    "boto3>=1.35.0",
 ]

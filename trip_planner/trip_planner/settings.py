@@ -33,6 +33,7 @@ SECRET_KEY = os.getenv(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
+USE_CLOUDFLARE_R2 = os.getenv("USE_CLOUDFLARE_R2", "False") == "True"
 
 _raw_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1")
 ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
@@ -47,7 +48,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "whitenoise.runserver_nostatic",
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
@@ -55,9 +55,13 @@ INSTALLED_APPS = [
     "trip",
 ]
 
+if not USE_CLOUDFLARE_R2:
+    INSTALLED_APPS.insert(6, "whitenoise.runserver_nostatic")
+else:
+    INSTALLED_APPS.append("storages")
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -66,6 +70,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if not USE_CLOUDFLARE_R2:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "trip_planner.urls"
 
@@ -145,7 +152,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "/static/"
+# When R2 is enabled STATIC_URL is derived from the custom CDN domain;
+# otherwise it can be overridden via env (default /static/).
+STATIC_URL = os.getenv("STATIC_URL", "/static/")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -211,15 +220,69 @@ WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_USE_FINDERS = DEBUG
 WHITENOISE_MAX_AGE = 0 if DEBUG else 60 * 60 * 24 * 365
 
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": (
-            "django.contrib.staticfiles.storage.StaticFilesStorage"
-            if DEBUG
-            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
-        ),
-    },
-}
+if USE_CLOUDFLARE_R2:
+    R2_ACCOUNT_ID = os.getenv("CLOUDFLARE_R2_ACCOUNT_ID", "")
+    AWS_ACCESS_KEY_ID = os.getenv("CLOUDFLARE_R2_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY = os.getenv("CLOUDFLARE_R2_SECRET_ACCESS_KEY", "")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("CLOUDFLARE_R2_BUCKET_NAME", "")
+    AWS_S3_REGION_NAME = os.getenv("CLOUDFLARE_R2_REGION", "auto")
+    AWS_S3_ENDPOINT_URL = os.getenv(
+        "CLOUDFLARE_R2_ENDPOINT_URL",
+        f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else "",
+    )
+    AWS_S3_CUSTOM_DOMAIN = os.getenv("CLOUDFLARE_R2_CUSTOM_DOMAIN", "")
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_S3_ADDRESSING_STYLE = "auto"
+    AWS_S3_FILE_OVERWRITE = True
+    AWS_S3_OBJECT_PARAMETERS = {
+        "CacheControl": "public, max-age=31536000, immutable",
+    }
+
+    _static_location = os.getenv("CLOUDFLARE_R2_STATIC_LOCATION", "static")
+    _media_location = os.getenv("CLOUDFLARE_R2_MEDIA_LOCATION", "media")
+
+    # Auto-derive STATIC_URL from custom CDN domain when set
+    if AWS_S3_CUSTOM_DOMAIN:
+        STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{_static_location}/"
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{_media_location}/"
+
+    STORAGES = {
+        # User-uploaded files (ELD PDFs etc.) → R2 media prefix
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "location": _media_location,
+                "default_acl": None,
+                "querystring_auth": False,
+                "object_parameters": {
+                    "CacheControl": "public, max-age=86400",
+                },
+            },
+        },
+        # Collected static files → R2 static prefix
+        "staticfiles": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "location": _static_location,
+                "default_acl": None,
+                "querystring_auth": False,
+            },
+        },
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": (
+                "django.contrib.staticfiles.storage.StaticFilesStorage"
+                if DEBUG
+                else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            ),
+        },
+    }

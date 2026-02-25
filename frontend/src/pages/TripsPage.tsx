@@ -169,35 +169,36 @@ function TripCard({
           </motion.div>
         </Link>
 
-        {/* Delete button — sits outside the Link */}
-        <div className="absolute top-3 right-10 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Delete button — top-right floating action */}
+        <div className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
           <AnimatePresence mode="wait">
             {confirmDelete ? (
               <motion.div
                 key="confirm"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex items-center gap-1.5"
+                initial={{ opacity: 0, scale: 0.9, y: 5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 5 }}
+                className="flex items-center gap-1 p-1 rounded-xl shadow-lg"
+                style={{
+                  background: C.surface,
+                  border: `1px solid ${C.border}`,
+                }}
               >
-                <span
-                  className="text-xs"
-                  style={{ color: C.muted, fontFamily: BODY }}
+                <div
+                  className="px-2 text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: C.muted }}
                 >
                   Delete?
-                </span>
+                </div>
                 <button
                   onClick={(e) => {
                     e.preventDefault();
                     onDelete(trip.id);
                   }}
-                  className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+                  className="rounded-lg px-3 py-1.5 text-xs font-bold transition-colors"
                   style={{
-                    background: "rgba(239,68,68,0.15)",
-                    color: "#f87171",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                    fontFamily: BODY,
-                    cursor: "pointer",
+                    background: "#ef4444",
+                    color: "#fff",
                   }}
                 >
                   Yes
@@ -207,13 +208,9 @@ function TripCard({
                     e.preventDefault();
                     setConfirmDelete(false);
                   }}
-                  className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/5"
                   style={{
-                    background: C.surface,
-                    color: C.muted,
-                    border: `1px solid ${C.border}`,
-                    fontFamily: BODY,
-                    cursor: "pointer",
+                    color: C.text,
                   }}
                 >
                   No
@@ -222,25 +219,28 @@ function TripCard({
             ) : (
               <motion.button
                 key="trash"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
                 onClick={(e) => {
                   e.preventDefault();
                   setConfirmDelete(true);
                 }}
-                className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-full shadow-lg transition-transform"
                 style={{
-                  background: "rgba(239,68,68,0.1)",
-                  border: "1px solid rgba(239,68,68,0.2)",
+                  background: C.surface,
+                  border: `1px solid ${C.border}`,
                   color: "#f87171",
                   cursor: "pointer",
                 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.93 }}
+                whileHover={{
+                  scale: 1.1,
+                  backgroundColor: "rgba(239,68,68,0.1)",
+                }}
+                whileTap={{ scale: 0.9 }}
                 title="Delete trip"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4" />
               </motion.button>
             )}
           </AnimatePresence>

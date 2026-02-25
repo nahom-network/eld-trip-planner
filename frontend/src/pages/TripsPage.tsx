@@ -84,13 +84,14 @@ function TripCard({
   index: number;
   onDelete: (id: string) => void;
 }) {
-  const { colors: C } = useTheme();
+  const { colors: C, isDark } = useTheme();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const createdAt = new Date(trip.created_at).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -102,19 +103,39 @@ function TripCard({
         delay: index * 0.07,
       }}
     >
-      <div className="relative group">
-        <Link to={`/trips/${trip.id}`} className="block">
-          <motion.div
-            className="relative rounded-2xl p-5 flex flex-col gap-3"
-            style={{ background: C.surface, border: `1px solid ${C.border}` }}
-            whileHover={{ y: -2, borderColor: "rgba(245,158,11,0.22)" }}
-            transition={{ duration: 0.2 }}
-          >
-            {/* hover glow */}
-            <div
-              className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{ boxShadow: "inset 0 0 40px rgba(245,158,11,0.04)" }}
+      <motion.div
+        className="rounded-2xl overflow-hidden"
+        animate={{
+          borderColor: confirmDelete ? "rgba(239,68,68,0.45)" : C.border,
+        }}
+        style={{ background: C.surface, border: `1px solid ${C.border}` }}
+        transition={{ duration: 0.18 }}
+      >
+        {/* Red wash when confirming */}
+        <AnimatePresence>
+          {confirmDelete && (
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                background: isDark
+                  ? "rgba(239,68,68,0.05)"
+                  : "rgba(239,68,68,0.03)",
+              }}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Card body — clicking navigates unless confirming */}
+        <Link
+          to={`/trips/${trip.id}`}
+          className="block p-5 group"
+          onClick={(e) => confirmDelete && e.preventDefault()}
+          style={{ position: "relative" }}
+        >
+          <div className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-0.5 min-w-0">
                 <p
@@ -136,6 +157,7 @@ function TripCard({
               </div>
               <StatusPill status={trip.status} />
             </div>
+
             <div className="flex items-center gap-4">
               {trip.total_distance_miles != null && (
                 <span
@@ -166,86 +188,95 @@ function TripCard({
                 style={{ color: C.amber }}
               />
             </div>
-          </motion.div>
+          </div>
         </Link>
 
-        {/* Delete button — top-right floating action */}
-        <div className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <AnimatePresence mode="wait">
-            {confirmDelete ? (
-              <motion.div
-                key="confirm"
-                initial={{ opacity: 0, scale: 0.9, y: 5 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 5 }}
-                className="flex items-center gap-1 p-1 rounded-xl shadow-lg"
-                style={{
-                  background: C.surface,
-                  border: `1px solid ${C.border}`,
-                }}
+        {/* Bottom action bar */}
+        <div
+          style={{
+            height: 1,
+            background: confirmDelete ? "rgba(239,68,68,0.18)" : C.border,
+          }}
+        />
+
+        <AnimatePresence mode="wait">
+          {confirmDelete ? (
+            <motion.div
+              key="confirm"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+              className="flex items-center justify-between px-5 py-3 gap-3"
+            >
+              <p
+                className="text-xs font-medium"
+                style={{ color: "#f87171", fontFamily: BODY }}
               >
-                <div
-                  className="px-2 text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: C.muted }}
-                >
-                  Delete?
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onDelete(trip.id);
+                Permanently delete this trip?
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <motion.button
+                  onClick={() => setConfirmDelete(false)}
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+                  style={{
+                    background: "transparent",
+                    border: `1px solid ${C.border}`,
+                    color: C.muted,
+                    fontFamily: BODY,
+                    cursor: "pointer",
                   }}
-                  className="rounded-lg px-3 py-1.5 text-xs font-bold transition-colors"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={() => onDelete(trip.id)}
+                  className="rounded-lg px-3 py-1.5 text-xs font-bold"
                   style={{
                     background: "#ef4444",
                     color: "#fff",
+                    fontFamily: BODY,
+                    cursor: "pointer",
+                    border: "none",
                   }}
+                  whileHover={{ scale: 1.04, background: "#dc2626" }}
+                  whileTap={{ scale: 0.96 }}
                 >
-                  Yes
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setConfirmDelete(false);
-                  }}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/5"
-                  style={{
-                    color: C.text,
-                  }}
-                >
-                  No
-                </button>
-              </motion.div>
-            ) : (
+                  Delete
+                </motion.button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="idle"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="flex justify-end px-4 py-2"
+            >
               <motion.button
-                key="trash"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setConfirmDelete(true);
-                }}
-                className="flex items-center justify-center w-8 h-8 rounded-full shadow-lg transition-transform"
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
                 style={{
-                  background: C.surface,
-                  border: `1px solid ${C.border}`,
-                  color: "#f87171",
+                  background: "transparent",
+                  border: "none",
+                  color: C.muted,
+                  fontFamily: BODY,
                   cursor: "pointer",
                 }}
-                whileHover={{
-                  scale: 1.1,
-                  backgroundColor: "rgba(239,68,68,0.1)",
-                }}
-                whileTap={{ scale: 0.9 }}
-                title="Delete trip"
+                whileHover={{ color: "#f87171" }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
               </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </motion.div>
   );
 }

@@ -31,16 +31,7 @@ COPY nginx.conf /etc/nginx/conf.d/app.conf
 # Copy built assets from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Run nginx as a non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
-    && chown -R appuser:appgroup /usr/share/nginx/html \
-    && chown -R appuser:appgroup /var/cache/nginx \
-    && chown -R appuser:appgroup /var/log/nginx \
-    && touch /var/run/nginx.pid \
-    && chown appuser:appgroup /var/run/nginx.pid
-
-USER appuser
-
+# nginx runs as root — master process binds port and manages workers
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

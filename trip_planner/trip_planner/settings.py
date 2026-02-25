@@ -245,8 +245,8 @@ if USE_CLOUDFLARE_R2:
 
     # Auto-derive STATIC_URL from custom CDN domain when set
     if AWS_S3_CUSTOM_DOMAIN:
-        STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{_static_location}/"
-        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{_media_location}/"
+        STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/{_static_location}/"
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}{_media_location}/"
 
     STORAGES = {
         # User-uploaded files (ELD PDFs etc.) → R2 media prefix

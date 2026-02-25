@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { Loader2, Truck } from "lucide-react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,8 @@ import { useAuth } from "../context/AuthContext";
 import type { RegisterPayload } from "../types/trip";
 
 export default function RegisterPage() {
-  const { register: authRegister } = useAuth();
+  const { register: authRegister, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-
   const {
     register,
     handleSubmit,
@@ -27,6 +26,10 @@ export default function RegisterPage() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterPayload>();
+
+  if (!isLoading && isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const password = watch("password");
 

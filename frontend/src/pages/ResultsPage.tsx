@@ -135,7 +135,7 @@ export default function ResultsPage() {
           )}
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/">
+          <Link to="/dashboard">
             <ArrowLeft className="w-4 h-4 mr-1" /> New Trip
           </Link>
         </Button>

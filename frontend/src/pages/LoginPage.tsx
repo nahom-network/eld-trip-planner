@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Loader2, Truck } from "lucide-react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import type { LoginPayload } from "../types/trip";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from =
@@ -30,6 +30,9 @@ export default function LoginPage() {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginPayload>();
+  if (!isLoading && isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const onSubmit = async (values: LoginPayload) => {
     try {

@@ -59,7 +59,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://\w+\.nahom\.codes$"]
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = "trip_planner.urls"
 

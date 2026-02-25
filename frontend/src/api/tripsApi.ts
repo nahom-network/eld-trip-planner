@@ -80,3 +80,9 @@ export async function getTrip(id: string): Promise<Trip> {
   const { data } = await api.get<Trip>(`/api/trips/${id}/`);
   return data;
 }
+
+export async function deleteTrip(id: string): Promise<void> {
+  await api.delete(`/api/trips/${id}/`);
+
+  return undefined;
+}

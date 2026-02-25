@@ -6,7 +6,12 @@ from django.core.files.base import ContentFile
 from django.http import FileResponse, Http404
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveAPIView
+from rest_framework.generics import (
+    CreateAPIView,
+    ListCreateAPIView,
+    RetrieveAPIView,
+    RetrieveDestroyAPIView,
+)
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -279,12 +284,22 @@ class TripCreateView(ListCreateAPIView):
 
 
 @extend_schema(tags=["trips"])
-class TripDetailView(RetrieveAPIView):
-    """Retrieve a previously planned trip with all stops, daily logs, and route polyline."""
+class TripDetailView(RetrieveDestroyAPIView):
+    """Retrieve or delete a previously planned trip."""
 
     @extend_schema(summary="Retrieve a trip", responses={200: TripDetailSerializer})
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete a trip",
+        responses={
+            204: OpenApiResponse(description="Trip deleted successfully"),
+            404: OpenApiResponse(description="Trip not found"),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
 
     def get_queryset(self):
         return Trip.objects.prefetch_related("stops", "daily_logs").filter(

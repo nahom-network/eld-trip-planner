@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -12,11 +12,12 @@ import {
   Loader2,
   ChevronRight,
   UserCircle,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../stores/authStore";
 import { useTheme } from "../stores/themeStore";
 import ThemeToggle from "../components/ThemeToggle";
-import { listTrips } from "../api/tripsApi";
+import { listTrips, deleteTrip } from "../api/tripsApi";
 import type { TripList, TripStatus, Paginated } from "../types/trip";
 
 const DISPLAY = "'Bricolage Grotesque', sans-serif";
@@ -74,8 +75,17 @@ function StatusPill({ status }: { status: TripStatus }) {
   );
 }
 
-function TripCard({ trip, index }: { trip: TripList; index: number }) {
+function TripCard({
+  trip,
+  index,
+  onDelete,
+}: {
+  trip: TripList;
+  index: number;
+  onDelete: (id: string) => void;
+}) {
   const { colors: C } = useTheme();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const createdAt = new Date(trip.created_at).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -85,77 +95,157 @@ function TripCard({ trip, index }: { trip: TripList; index: number }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97 }}
       transition={{
         duration: 0.45,
         ease: [0.22, 1, 0.36, 1],
         delay: index * 0.07,
       }}
     >
-      <Link to={`/trips/${trip.id}`} className="block group">
-        <motion.div
-          className="relative rounded-2xl p-5 flex flex-col gap-3"
-          style={{ background: C.surface, border: `1px solid ${C.border}` }}
-          whileHover={{ y: -2, borderColor: "rgba(245,158,11,0.22)" }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* hover glow */}
-          <div
-            className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ boxShadow: "inset 0 0 40px rgba(245,158,11,0.04)" }}
-          />
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <p
-                className="font-semibold truncate"
-                style={{
-                  color: C.text,
-                  fontFamily: DISPLAY,
-                  fontSize: "0.95rem",
-                }}
-              >
-                {trip.current_location} → {trip.dropoff_location}
-              </p>
-              <p
-                className="text-xs truncate"
-                style={{ color: C.muted, fontFamily: BODY }}
-              >
-                via {trip.pickup_location}
-              </p>
-            </div>
-            <StatusPill status={trip.status} />
-          </div>
-          <div className="flex items-center gap-4">
-            {trip.total_distance_miles != null && (
-              <span
-                className="flex items-center gap-1.5 text-xs"
-                style={{ color: C.muted, fontFamily: BODY }}
-              >
-                <Route className="w-3 h-3" style={{ color: C.amber }} />
-                {trip.total_distance_miles.toFixed(0)} mi
-              </span>
-            )}
-            {trip.estimated_duration_hours != null && (
-              <span
-                className="flex items-center gap-1.5 text-xs"
-                style={{ color: C.muted, fontFamily: BODY }}
-              >
-                <Clock className="w-3 h-3" style={{ color: C.amber }} />
-                {trip.estimated_duration_hours.toFixed(1)} hrs
-              </span>
-            )}
-            <span
-              className="ml-auto text-xs"
-              style={{ color: C.textFaint, fontFamily: MONO }}
-            >
-              {createdAt}
-            </span>
-            <ChevronRight
-              className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ color: C.amber }}
+      <div className="relative group">
+        <Link to={`/trips/${trip.id}`} className="block">
+          <motion.div
+            className="relative rounded-2xl p-5 flex flex-col gap-3"
+            style={{ background: C.surface, border: `1px solid ${C.border}` }}
+            whileHover={{ y: -2, borderColor: "rgba(245,158,11,0.22)" }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* hover glow */}
+            <div
+              className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ boxShadow: "inset 0 0 40px rgba(245,158,11,0.04)" }}
             />
-          </div>
-        </motion.div>
-      </Link>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <p
+                  className="font-semibold truncate"
+                  style={{
+                    color: C.text,
+                    fontFamily: DISPLAY,
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  {trip.current_location} → {trip.dropoff_location}
+                </p>
+                <p
+                  className="text-xs truncate"
+                  style={{ color: C.muted, fontFamily: BODY }}
+                >
+                  via {trip.pickup_location}
+                </p>
+              </div>
+              <StatusPill status={trip.status} />
+            </div>
+            <div className="flex items-center gap-4">
+              {trip.total_distance_miles != null && (
+                <span
+                  className="flex items-center gap-1.5 text-xs"
+                  style={{ color: C.muted, fontFamily: BODY }}
+                >
+                  <Route className="w-3 h-3" style={{ color: C.amber }} />
+                  {trip.total_distance_miles.toFixed(0)} mi
+                </span>
+              )}
+              {trip.estimated_duration_hours != null && (
+                <span
+                  className="flex items-center gap-1.5 text-xs"
+                  style={{ color: C.muted, fontFamily: BODY }}
+                >
+                  <Clock className="w-3 h-3" style={{ color: C.amber }} />
+                  {trip.estimated_duration_hours.toFixed(1)} hrs
+                </span>
+              )}
+              <span
+                className="ml-auto text-xs"
+                style={{ color: C.textFaint, fontFamily: MONO }}
+              >
+                {createdAt}
+              </span>
+              <ChevronRight
+                className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ color: C.amber }}
+              />
+            </div>
+          </motion.div>
+        </Link>
+
+        {/* Delete button — sits outside the Link */}
+        <div className="absolute top-3 right-10 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <AnimatePresence mode="wait">
+            {confirmDelete ? (
+              <motion.div
+                key="confirm"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex items-center gap-1.5"
+              >
+                <span
+                  className="text-xs"
+                  style={{ color: C.muted, fontFamily: BODY }}
+                >
+                  Delete?
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete(trip.id);
+                  }}
+                  className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+                  style={{
+                    background: "rgba(239,68,68,0.15)",
+                    color: "#f87171",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    fontFamily: BODY,
+                    cursor: "pointer",
+                  }}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setConfirmDelete(false);
+                  }}
+                  className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+                  style={{
+                    background: C.surface,
+                    color: C.muted,
+                    border: `1px solid ${C.border}`,
+                    fontFamily: BODY,
+                    cursor: "pointer",
+                  }}
+                >
+                  No
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="trash"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setConfirmDelete(true);
+                }}
+                className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+                style={{
+                  background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  color: "#f87171",
+                  cursor: "pointer",
+                }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.93 }}
+                title="Delete trip"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -165,11 +255,17 @@ export default function TripsPage() {
   const { user, logout } = useAuth();
   const { colors: C } = useTheme();
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery<Paginated<TripList>>({
     queryKey: ["trips", page],
     queryFn: () => listTrips(page),
     placeholderData: (prev) => prev,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteTrip,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trips"] }),
   });
 
   const trips = data?.results;
@@ -351,7 +447,12 @@ export default function TripsPage() {
           <AnimatePresence>
             <div className="flex flex-col gap-3">
               {trips.map((trip, i) => (
-                <TripCard key={trip.id} trip={trip} index={i} />
+                <TripCard
+                  key={trip.id}
+                  trip={trip}
+                  index={i}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                />
               ))}
             </div>
           </AnimatePresence>

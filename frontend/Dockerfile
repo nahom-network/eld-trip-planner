@@ -15,8 +15,8 @@ RUN pnpm install --frozen-lockfile
 # Copy source and build
 COPY . .
 
-# Accept the API base URL at build time (empty = same-origin, proxy handles it)
-ARG VITE_API_BASE_URL=""
+ARG VITE_API_BASE_URL
+
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN pnpm build

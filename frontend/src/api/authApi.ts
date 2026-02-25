@@ -8,7 +8,7 @@ import type {
   User,
 } from "../types/trip";
 
-const base = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const base = import.meta.env.VITE_API_BASE_URL ?? "";
 
 const plain = axios.create({
   baseURL: base,

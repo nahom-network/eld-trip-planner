@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useRef } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../stores/authStore";
 import {
   motion,
   useInView,
@@ -469,7 +469,13 @@ function NavActions() {
           <button
             onClick={logout}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            style={{ color: C.muted, fontFamily: BODY, background: "none", border: "none", cursor: "pointer" }}
+            style={{
+              color: C.muted,
+              fontFamily: BODY,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
             onMouseLeave={(e) => (e.currentTarget.style.color = C.muted)}
           >

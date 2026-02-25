@@ -5,8 +5,8 @@ import type {
   CreateTripPayload,
   CreateTripResponse,
 } from "../types/trip";
-import { getStoredAccess, getStoredRefresh } from "../context/AuthContext";
 import { refreshAccessToken } from "./authApi";
+import { getStoredAccess, getStoredRefresh } from "@/stores/authStore";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000",

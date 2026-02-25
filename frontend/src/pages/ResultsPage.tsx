@@ -14,7 +14,7 @@ import {
 import { getTrip } from "../api/tripsApi";
 import StopTimeline from "../components/StopTimeline";
 import DailyLogsPanel from "../components/DailyLogsPanel";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../stores/themeStore";
 import ThemeToggle from "../components/ThemeToggle";
 
 const DISPLAY = "'Bricolage Grotesque', sans-serif";
@@ -210,7 +210,7 @@ export default function ResultsPage() {
                   letterSpacing: "0.1em",
                 }}
               >
-                SPOTTER
+                Trip Planner
               </span>
               <span
                 className="hidden sm:block rounded-full px-2 py-0.5 text-xs font-medium shrink-0"

@@ -73,11 +73,20 @@ interface RouteMapProps {
   trip: Trip;
 }
 
+// Continental US bounds with a small buffer so borders don't feel too tight
+// const US_BOUNDS: L.LatLngBoundsExpression = [
+//   [22.0, -128.0], // SW — below Hawaii / west of CA
+//   [52.0, -62.0], // NE — above Canada border / east of ME
+// ];
+
 export default function RouteMap({ trip }: RouteMapProps) {
   return (
     <MapContainer
       center={[39.5, -98.35]}
       zoom={4}
+      minZoom={4}
+      //   maxBounds={US_BOUNDS}
+      maxBoundsViscosity={1.0}
       className="w-full h-full rounded-xl"
       scrollWheelZoom
     >

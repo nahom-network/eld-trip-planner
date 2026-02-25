@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Truck, ArrowLeft } from "lucide-react";
 import TripForm from "../components/TripForm";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../stores/themeStore";
 import ThemeToggle from "../components/ThemeToggle";
 
 const DISPLAY = "'Bricolage Grotesque', sans-serif";
@@ -70,7 +70,7 @@ export default function PlannerPage() {
                 letterSpacing: "0.1em",
               }}
             >
-              SPOTTER
+              Trip Planner
             </span>
           </div>
         </div>

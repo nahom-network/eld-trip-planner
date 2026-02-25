@@ -5,6 +5,7 @@ import RegisterPage from "./pages/RegisterPage";
 import TripsPage from "./pages/TripsPage";
 import PlannerPage from "./pages/PlannerPage";
 import ResultsPage from "./pages/ResultsPage";
+import ProfilePage from "./pages/ProfilePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -34,6 +35,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ResultsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

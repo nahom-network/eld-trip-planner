@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { FileDown, Loader2 } from "lucide-react";
 import type { DailyLog } from "../types/trip";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../stores/themeStore";
 
 const MONO = "'DM Mono', monospace";
 const BODY = "'DM Sans', sans-serif";

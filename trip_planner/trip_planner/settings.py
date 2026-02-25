@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "corsheaders",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "trip",
 ]

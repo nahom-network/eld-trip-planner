@@ -11,9 +11,10 @@ import {
   AlertCircle,
   Loader2,
   ChevronRight,
+  UserCircle,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../stores/authStore";
+import { useTheme } from "../stores/themeStore";
 import ThemeToggle from "../components/ThemeToggle";
 import { listTrips } from "../api/tripsApi";
 import type { TripList, TripStatus } from "../types/trip";
@@ -106,7 +107,11 @@ function TripCard({ trip, index }: { trip: TripList; index: number }) {
             <div className="flex flex-col gap-0.5 min-w-0">
               <p
                 className="font-semibold truncate"
-                style={{ color: C.text, fontFamily: DISPLAY, fontSize: "0.95rem" }}
+                style={{
+                  color: C.text,
+                  fontFamily: DISPLAY,
+                  fontSize: "0.95rem",
+                }}
               >
                 {trip.current_location} → {trip.dropoff_location}
               </p>
@@ -191,23 +196,26 @@ export default function TripsPage() {
             <Truck className="w-4 h-4 text-white" strokeWidth={2} />
           </div>
           <span
-            className="font-extrabold tracking-widest text-white"
+            className="font-extrabold tracking-widest"
             style={{
+              color: C.text,
               fontFamily: DISPLAY,
               fontSize: "1.05rem",
               letterSpacing: "0.1em",
             }}
           >
-            SPOTTER
+            Trip Planner
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <span
-            className="hidden sm:block text-sm"
+          <Link
+            to="/profile"
+            className="hidden sm:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors"
             style={{ color: C.muted, fontFamily: BODY }}
           >
+            <UserCircle className="w-4 h-4 shrink-0" />
             {user?.username}
-          </span>
+          </Link>
           <ThemeToggle />
           <motion.button
             onClick={logout}
@@ -245,8 +253,8 @@ export default function TripsPage() {
               Dashboard
             </p>
             <h1
-              className="text-white"
               style={{
+                color: C.text,
                 fontFamily: DISPLAY,
                 fontSize: "2rem",
                 fontWeight: 800,

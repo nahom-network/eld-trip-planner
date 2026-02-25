@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import type { Stop, StopType } from "../types/trip";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../stores/themeStore";
 
 const MONO = "'DM Mono', monospace";
 const BODY = "'DM Sans', sans-serif";

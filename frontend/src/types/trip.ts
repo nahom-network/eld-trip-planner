@@ -103,6 +103,8 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 export interface AuthTokens {
@@ -118,6 +120,21 @@ export interface LoginPayload {
 export interface RegisterPayload {
   username: string;
   email: string;
+  first_name: string;
+  last_name: string;
   password: string;
   password_confirm: string;
+}
+
+export interface UpdateProfilePayload {
+  username?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  new_password_confirm: string;
 }

@@ -7,6 +7,7 @@ from django.http import FileResponse, Http404
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -41,6 +42,12 @@ class HealthCheckView(APIView):
 logger = logging.getLogger(__name__)
 
 
+class TripPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"  # ?page_size=20
+    max_page_size = 100
+
+
 @extend_schema(tags=["trips"])
 class TripCreateView(ListCreateAPIView):
     """
@@ -53,6 +60,7 @@ class TripCreateView(ListCreateAPIView):
     """
 
     serializer_class = TripCreateSerializer
+    pagination_class = TripPagination
 
     def get_queryset(self):
         return (
@@ -68,6 +76,7 @@ class TripCreateView(ListCreateAPIView):
 
     @extend_schema(
         summary="List planned trips",
+        description="Returns a paginated list of the authenticated user's trips. Use `?page=2` and `?page_size=20` to navigate.",
         responses={200: TripListSerializer(many=True)},
     )
     def list(self, request, *args, **kwargs):
@@ -227,6 +236,7 @@ class TripCreateView(ListCreateAPIView):
         Stop.objects.bulk_create(stop_objs)
 
         # 6. Persist daily logs + generate ELD PDFs
+        driver_name = trip.user.get_full_name() or trip.user.username
         eld_gen = ELDGenerator()
         for log_data in plan.daily_logs:
             log_input = ELDLogInput(
@@ -242,6 +252,7 @@ class TripCreateView(ListCreateAPIView):
                 to_location=log_data.to_location,
                 total_miles=log_data.total_miles,
                 trip_id=trip.pk,
+                driver_name=driver_name,
             )
             pdf_bytes = eld_gen.generate(log_input)
 

@@ -240,9 +240,6 @@ if USE_CLOUDFLARE_R2:
         "CacheControl": "public, max-age=31536000, immutable",
     }
 
-    _static_location = os.getenv("CLOUDFLARE_R2_STATIC_LOCATION", "static")
-    _media_location = os.getenv("CLOUDFLARE_R2_MEDIA_LOCATION", "media")
-
     # Auto-derive STATIC_URL from custom CDN domain when set
     if AWS_S3_CUSTOM_DOMAIN:
         STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/{_static_location}/"
@@ -254,7 +251,6 @@ if USE_CLOUDFLARE_R2:
             "BACKEND": "storages.backends.s3.S3Storage",
             "OPTIONS": {
                 "bucket_name": AWS_STORAGE_BUCKET_NAME,
-                "location": _media_location,
                 "default_acl": None,
                 "querystring_auth": False,
                 "object_parameters": {
@@ -267,7 +263,6 @@ if USE_CLOUDFLARE_R2:
             "BACKEND": "storages.backends.s3.S3Storage",
             "OPTIONS": {
                 "bucket_name": AWS_STORAGE_BUCKET_NAME,
-                "location": _static_location,
                 "default_acl": None,
                 "querystring_auth": False,
             },

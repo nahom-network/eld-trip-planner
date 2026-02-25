@@ -72,7 +72,9 @@ MIDDLEWARE = [
 ]
 
 if not USE_CLOUDFLARE_R2:
-    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+    # Insert WhiteNoise AFTER CorsMiddleware (index 2) so CORS headers are
+    # always added before WhiteNoise can short-circuit a response.
+    MIDDLEWARE.insert(2, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "trip_planner.urls"
 

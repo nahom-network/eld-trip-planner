@@ -1,0 +1,649 @@
+openapi: 3.0.3
+info:
+  title: Trip Planner ELD API
+  version: 1.0.0
+  description: Plan truck driver trips with full FMCSA Hours-of-Service compliance.
+    Accepts a current location, pickup, dropoff, and current cycle hours, then returns
+    an optimised stop schedule, a GeoJSON route, and downloadable ELD Daily Log PDFs
+    for each driving day.
+  contact:
+    name: Trip Planner
+  license:
+    name: MIT
+paths:
+  /api/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      description: Return the currently authenticated user's profile.
+      summary: Get current user
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Register a new user and receive JWT access + refresh tokens.
+      summary: Register a new user
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          description: User created — returns access + refresh tokens
+        '400':
+          description: Validation error
+  /api/auth/token/:
+    post:
+      operationId: auth_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/health/:
+    get:
+      operationId: health_retrieve
+      description: 'Returns `{"status": "ok"}` when the server is running.'
+      summary: Health check
+      tags:
+      - system
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+          description: ''
+  /api/trips/:
+    get:
+      operationId: trips_list
+      description: |-
+        Plan a truck driver trip.
+
+        Geocodes all three locations, fetches an OSRM driving route, runs the
+        full FMCSA 70-hr/8-day HOS engine, and generates a filled ELD Daily Log
+        PDF for every driving day.  Returns the complete trip detail including
+        GeoJSON route polyline, ordered stop list, and PDF download URLs.
+      tags:
+      - trips
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TripList'
+          description: ''
+    post:
+      operationId: trips_create
+      description: |-
+        Plan a truck driver trip.
+
+        Geocodes all three locations, fetches an OSRM driving route, runs the
+        full FMCSA 70-hr/8-day HOS engine, and generates a filled ELD Daily Log
+        PDF for every driving day.  Returns the complete trip detail including
+        GeoJSON route polyline, ordered stop list, and PDF download URLs.
+      tags:
+      - trips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripCreate'
+          description: ''
+  /api/trips/{id}/:
+    get:
+      operationId: trips_retrieve
+      description: Retrieve a previously planned trip with all stops, daily logs,
+        and route polyline.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - trips
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripDetail'
+          description: ''
+  /api/trips/{id}/logs/{day_number}/pdf/:
+    get:
+      operationId: trips_logs_pdf_retrieve
+      description: Download the generated ELD Daily Log Sheet PDF for a specific trip
+        day.
+      summary: Download ELD log PDF
+      parameters:
+      - in: path
+        name: day_number
+        schema:
+          type: integer
+        description: Log day number (1-based)
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: pk
+        schema:
+          type: integer
+        description: Trip ID
+        required: true
+      tags:
+      - logs
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: PDF file (application/pdf)
+        '404':
+          description: Trip or log not found
+components:
+  schemas:
+    DailyLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        date:
+          type: string
+          format: date
+          readOnly: true
+        day_number:
+          type: integer
+          readOnly: true
+        activities:
+          readOnly: true
+        total_driving_hours:
+          type: number
+          format: double
+          readOnly: true
+        total_on_duty_hours:
+          type: number
+          format: double
+          readOnly: true
+        total_off_duty_hours:
+          type: number
+          format: double
+          readOnly: true
+        total_sleeper_hours:
+          type: number
+          format: double
+          readOnly: true
+        cycle_hours_used:
+          type: number
+          format: double
+          readOnly: true
+          description: Cumulative cycle hours at end of day
+        from_location:
+          type: string
+          readOnly: true
+        to_location:
+          type: string
+          readOnly: true
+        total_miles:
+          type: number
+          format: double
+          readOnly: true
+        pdf_url:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - activities
+      - cycle_hours_used
+      - date
+      - day_number
+      - from_location
+      - id
+      - pdf_url
+      - to_location
+      - total_driving_hours
+      - total_miles
+      - total_off_duty_hours
+      - total_on_duty_hours
+      - total_sleeper_hours
+    Register:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        password_confirm:
+          type: string
+          writeOnly: true
+      required:
+      - id
+      - password
+      - password_confirm
+      - username
+    StatusEnum:
+      enum:
+      - pending
+      - completed
+      - error
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `completed` - Completed
+        * `error` - Error
+    Stop:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        stop_type:
+          allOf:
+          - $ref: '#/components/schemas/StopTypeEnum'
+          readOnly: true
+        stop_type_display:
+          type: string
+          readOnly: true
+        location_name:
+          type: string
+          readOnly: true
+        lat:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        lng:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        arrival_time:
+          type: string
+          format: date-time
+          readOnly: true
+        departure_time:
+          type: string
+          format: date-time
+          readOnly: true
+        duration_hours:
+          type: number
+          format: double
+          readOnly: true
+        cumulative_miles:
+          type: number
+          format: double
+          readOnly: true
+        order:
+          type: integer
+          readOnly: true
+        notes:
+          type: string
+          readOnly: true
+      required:
+      - arrival_time
+      - cumulative_miles
+      - departure_time
+      - duration_hours
+      - id
+      - lat
+      - lng
+      - location_name
+      - notes
+      - order
+      - stop_type
+      - stop_type_display
+    StopTypeEnum:
+      enum:
+      - start
+      - pickup
+      - dropoff
+      - fuel
+      - rest
+      - break
+      type: string
+      description: |-
+        * `start` - Start
+        * `pickup` - Pickup
+        * `dropoff` - Dropoff
+        * `fuel` - Fuel Stop
+        * `rest` - 10-Hr Rest
+        * `break` - 30-Min Break
+    TokenObtainPair:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - password
+      - refresh
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          writeOnly: true
+      required:
+      - access
+      - refresh
+    TripCreate:
+      type: object
+      properties:
+        current_location:
+          type: string
+          maxLength: 255
+        pickup_location:
+          type: string
+          maxLength: 255
+        dropoff_location:
+          type: string
+          maxLength: 255
+        current_cycle_used:
+          type: number
+          format: double
+          maximum: 69.99
+          minimum: 0.0
+      required:
+      - current_cycle_used
+      - current_location
+      - dropoff_location
+      - pickup_location
+    TripDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        current_location:
+          type: string
+          readOnly: true
+        pickup_location:
+          type: string
+          readOnly: true
+        dropoff_location:
+          type: string
+          readOnly: true
+        current_cycle_used:
+          type: number
+          format: double
+          readOnly: true
+          description: Hours used in current 8-day cycle
+        current_lat:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        current_lng:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        pickup_lat:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        pickup_lng:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        dropoff_lat:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        dropoff_lng:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        total_distance_miles:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        estimated_duration_hours:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        route_polyline:
+          readOnly: true
+          nullable: true
+          description: GeoJSON LineString for the full route
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        status_display:
+          type: string
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/Stop'
+          readOnly: true
+        daily_logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyLog'
+          readOnly: true
+      required:
+      - created_at
+      - current_cycle_used
+      - current_lat
+      - current_lng
+      - current_location
+      - daily_logs
+      - dropoff_lat
+      - dropoff_lng
+      - dropoff_location
+      - error_message
+      - estimated_duration_hours
+      - id
+      - pickup_lat
+      - pickup_lng
+      - pickup_location
+      - route_polyline
+      - status
+      - status_display
+      - stops
+      - total_distance_miles
+    TripList:
+      type: object
+      description: Lightweight serializer for the trip list endpoint.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        current_location:
+          type: string
+          readOnly: true
+        pickup_location:
+          type: string
+          readOnly: true
+        dropoff_location:
+          type: string
+          readOnly: true
+        current_cycle_used:
+          type: number
+          format: double
+          readOnly: true
+          description: Hours used in current 8-day cycle
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        total_distance_miles:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        estimated_duration_hours:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - current_cycle_used
+      - current_location
+      - dropoff_location
+      - estimated_duration_hours
+      - id
+      - pickup_location
+      - status
+      - total_distance_miles
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Email address
+      required:
+      - email
+      - id
+      - username
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: trips
+  description: Trip planning and retrieval
+- name: logs
+  description: ELD Daily Log PDF download
+- name: system
+  description: Health and schema endpoints

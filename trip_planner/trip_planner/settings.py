@@ -35,8 +35,37 @@ SECRET_KEY = os.getenv(
 DEBUG = os.getenv("DEBUG", "True") == "True"
 USE_CLOUDFLARE_R2 = os.getenv("USE_CLOUDFLARE_R2", "False") == "True"
 
-_raw_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1")
-ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
+
+def _split_csv_env(name: str, default: str = "") -> list[str]:
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+def _build_default_csrf_trusted_origins(hosts: list[str]) -> list[str]:
+    origins: list[str] = []
+
+    for host in hosts:
+        if host == "*":
+            continue
+
+        normalized_host = host[1:] if host.startswith(".") else host
+        if not normalized_host:
+            continue
+
+        for scheme in ("http", "https"):
+            origin = f"{scheme}://{normalized_host}"
+            if origin not in origins:
+                origins.append(origin)
+
+    return origins
+
+
+ALLOWED_HOSTS = _split_csv_env("ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = _split_csv_env(
+    "CSRF_TRUSTED_ORIGINS"
+) or _build_default_csrf_trusted_origins(ALLOWED_HOSTS)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = os.getenv("USE_X_FORWARDED_HOST", "True") == "True"
 
 
 # Application definition
